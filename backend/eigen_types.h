@@ -105,6 +105,4 @@ typedef std::vector<Vec3f, Eigen::aligned_allocator<Vec3f>> VecVec3f;
 // Map of Eigen matrix
 typedef std::map<unsigned long, MatXX, std::less<unsigned long>, Eigen::aligned_allocator<MatXX>> MapMatXX;
 
-
-
 #endif

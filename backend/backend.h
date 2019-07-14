@@ -16,5 +16,4 @@
 
 #include "edge_reprojection.h"
 
-
 #endif //SLAM_COURSE_BACKEND_H

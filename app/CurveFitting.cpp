@@ -6,85 +6,101 @@ using namespace myslam::backend;
 using namespace std;
 
 // 曲线模型的顶点，模板参数：优化变量维度和数据类型
-class CurveFittingVertex: public Vertex
+class CurveFittingVertex : public Vertex
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    CurveFittingVertex(): Vertex(3) {}  // abc: 三个参数， Vertex 是 3 维的
+    CurveFittingVertex() : Vertex(3) {} // abc: 三个参数， Vertex 是 3 维的
     virtual std::string TypeInfo() const { return "abc"; }
 };
 
 // 误差模型 模板参数：观测值维度，类型，连接顶点类型
-class CurveFittingEdge: public Edge
+class CurveFittingEdge : public Edge
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    CurveFittingEdge( double x, double y ): Edge(1,1, std::vector<std::string>{"abc"}) {
+    // Edge(residual_dimention, num_vertices)
+    CurveFittingEdge(double x, double y) : Edge(1, 1, std::vector<std::string>{"abc"})
+    {
         x_ = x;
         y_ = y;
     }
     // 计算曲线模型误差
     virtual void ComputeResidual() override
     {
-        Vec3 abc = verticies_[0]->Parameters();  // 估计的参数
-        residual_(0) = std::exp( abc(0)*x_*x_ + abc(1)*x_ + abc(2) ) - y_;  // 构建残差
+        Vec3 abc = verticies_[0]->Parameters();                                // 估计的参数
+        residual_(0) = std::exp(abc(0) * x_ * x_ + abc(1) * x_ + abc(2)) - y_; // 构建残差
     }
 
     // 计算残差对变量的雅克比
     virtual void ComputeJacobians() override
     {
         Vec3 abc = verticies_[0]->Parameters();
-        double exp_y = std::exp( abc(0)*x_*x_ + abc(1)*x_ + abc(2) );
+        double exp_y = std::exp(abc(0) * x_ * x_ + abc(1) * x_ + abc(2));
 
-        Eigen::Matrix<double, 1, 3> jaco_abc;  // 误差为1维，状态量 3 个，所以是 1x3 的雅克比矩阵
-        jaco_abc << x_ * x_ * exp_y, x_ * exp_y , 1 * exp_y;
+        Eigen::Matrix<double, 1, 3> jaco_abc; // 误差为1维，状态量 3 个，所以是 1x3 的雅克比矩阵
+        jaco_abc << x_ * x_ * exp_y, x_ * exp_y, 1 * exp_y;
         jacobians_[0] = jaco_abc;
     }
     /// 返回边的类型信息
     virtual std::string TypeInfo() const override { return "CurveFittingEdge"; }
+
 public:
-    double x_,y_;  // x 值， y 值为 _measurement
+    double x_, y_; // x 值， y 值为 _measurement
 };
 
 int main()
 {
-    double a=1.0, b=2.0, c=1.0;         // 真实参数值
-    int N = 100;                          // 数据点
-    double w_sigma= 1.;                 // 噪声Sigma值
+    double a = 1.0, b = 2.0, c = 1.0; // 真实参数值
+    int N = 100;                      // 数据点
+    double w_sigma = 1.;              // 噪声Sigma值
 
     std::default_random_engine generator;
-    std::normal_distribution<double> noise(0.,w_sigma);
+    std::normal_distribution<double> noise(0., w_sigma);
 
+    /*
+     优化问题的构建步骤：
+     1.定义优化问题problem对象 
+     构建vertex:
+     2.定义vertex对象，赋初始值
+     3.向problem添加vertex
+     构建edge：
+     4.根据观测结果构建edge
+     5.将所有与该edge相关联的vertex进行初始值设置
+     6.将该edge添加到最小二乘问题中
+     残差函数的构建
+    */
     // 构建 problem
     Problem problem(Problem::ProblemType::GENERIC_PROBLEM);
-    shared_ptr< CurveFittingVertex > vertex(new CurveFittingVertex());
+    shared_ptr<CurveFittingVertex> vertex(new CurveFittingVertex());
 
     // 设定待估计参数 a, b, c初始值
-    vertex->SetParameters(Eigen::Vector3d (0.,0.,0.));
+    vertex->SetParameters(Eigen::Vector3d(0., 0., 0.));
     // 将待估计的参数加入最小二乘问题
     problem.AddVertex(vertex);
 
     // 构造 N 次观测
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; ++i)
+    {
 
-        double x = i/100.;
+        double x = i / 100.;
         double n = noise(generator);
         // 观测 y
-        double y = std::exp( a*x*x + b*x + c ) + n;
-//        double y = std::exp( a*x*x + b*x + c );
+        double y = std::exp(a * x * x + b * x + c) + n;
+        //        double y = std::exp( a*x*x + b*x + c );
 
         // 每个观测对应的残差函数
-        shared_ptr< CurveFittingEdge > edge(new CurveFittingEdge(x,y));
-        std::vector<std::shared_ptr<Vertex>> edge_vertex;
-        edge_vertex.push_back(vertex);
-        edge->SetVertex(edge_vertex);
+        shared_ptr<CurveFittingEdge> edge(new CurveFittingEdge(x, y)); // edge 将观测作为参数传入
+        std::vector<std::shared_ptr<Vertex>> edge_vertex;              // 每个edge对应的vertex，可能有多个，此处只有一个
+        edge_vertex.push_back(vertex);                                 // 设置vertex的初值
+        edge->SetVertex(edge_vertex);                                  // 为每个edge设置关联的顶点，并赋初始值，残差计算需要该值
 
         // 把这个残差添加到最小二乘问题
         problem.AddEdge(edge);
     }
 
-    std::cout<<"\nTest CurveFitting start..."<<std::endl;
+    std::cout << "\nTest CurveFitting start..." << std::endl;
     /// 使用 LM 求解
     problem.Solve(30);
 
@@ -96,5 +112,3 @@ int main()
     // std
     return 0;
 }
-
-
