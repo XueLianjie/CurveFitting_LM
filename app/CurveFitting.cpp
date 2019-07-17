@@ -21,6 +21,7 @@ class CurveFittingEdge : public Edge
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // Edge(residual_dimention, num_vertices)
+    // 给边提供两个变量
     CurveFittingEdge(double x, double y) : Edge(1, 1, std::vector<std::string>{"abc"})
     {
         x_ = x;
@@ -61,13 +62,13 @@ int main()
 
     /*
      优化问题的构建步骤：
-     1.定义优化问题problem对象 
+     1.定义优化问题problem对象，每个problem对象都需要添加vertex成员和edge成员
      构建vertex:
      2.定义vertex对象，赋初始值
      3.向problem添加vertex
      构建edge：
-     4.根据观测结果构建edge
-     5.将所有与该edge相关联的vertex进行初始值设置
+     4.根据观测结果构建edge，每个edge都是一个由观测组成的约束项，约束住vertex待优化变量
+     5.将所有与该edge相关联的vertex进行初始值设置，每个edge都有相关联的vertex对象
      6.将该edge添加到最小二乘问题中
      残差函数的构建
     */

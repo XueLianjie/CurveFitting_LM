@@ -61,7 +61,8 @@ bool Problem::AddEdge(shared_ptr<Edge> edge)
 
     for (auto &vertex : edge->Verticies())
     {
-        vertexToEdge_.insert(pair<ulong, shared_ptr<Edge>>(vertex->Id(), edge));
+        vertexToEdge_.insert(pair<ulong, shared_ptr<Edge>>(vertex->Id(), edge)); //每个vertex与edge是一对多的关系，每个vertex对应多个edge
+        //同时每个edge对应多个vertex，两者共同构建成网
     }
     return true;
 }
@@ -172,6 +173,7 @@ void Problem::MakeHessian()
     //#endif
 
     // 遍历每个残差，并计算他们的雅克比，得到最后的 H = J^T * J
+    // Hessian矩阵通过手工运算将每个残差的jacobian填入到H的每个block中
     for (auto &edge : edges_)
     {
 
@@ -206,14 +208,15 @@ void Problem::MakeHessian()
                 assert(v_j->OrderingId() != -1);
                 MatXX hessian = JtW * jacobian_j;
                 // 所有的信息矩阵叠加起来
-                H.block(index_i, index_j, dim_i, dim_j).noalias() += hessian;
+                H.block(index_i, index_j, dim_i, dim_j).noalias() += hessian; // noalias在eigen中表示声明没有混淆，
+                //eigen中矩阵相乘会默认解决混淆，如果你确定没有混淆采用noalias提速
                 if (j != i)
                 {
                     // 对称的下三角
                     H.block(index_j, index_i, dim_j, dim_i).noalias() += hessian.transpose();
                 }
             }
-            b.segment(index_i, dim_i).noalias() -= JtW * edge.second->Residual();
+            b.segment(index_i, dim_i).noalias() -= JtW * edge.second->Residual(); // b.segment(i,i+n)，等价于matlab中b(i+1:i+n)
         }
     }
     Hessian_ = H;

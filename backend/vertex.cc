@@ -6,7 +6,7 @@ namespace myslam
 namespace backend
 {
 
-unsigned long global_vertex_id = 0;
+unsigned long global_vertex_id = 0; //  全局vertex id标志
 
 Vertex::Vertex(int num_dimension, int local_dimension)
 {
