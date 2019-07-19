@@ -174,6 +174,9 @@ void Problem::MakeHessian()
 
     // 遍历每个残差，并计算他们的雅克比，得到最后的 H = J^T * J
     // Hessian矩阵通过手工运算将每个残差的jacobian填入到H的每个block中
+    // 遍历每个edge,每个edge对应一个残差项，每个残差项对应一个J^T * J
+    //　逐行逐列将J^T * J 中每个元素的值计算出来填入到对应的位置，由于J^T * J是对称矩阵，所以只需要遍历半个矩阵即可
+    //　Jacobian的求解是||f(x)||2中f(x）相对于待求解变量，所有其维度为行数为残差项维度，列数为待求解变量维度
     for (auto &edge : edges_)
     {
 
