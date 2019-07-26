@@ -11,7 +11,7 @@ class CurveFittingVertex : public Vertex
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    CurveFittingVertex() : Vertex(3) {} // abc: 三个参数， Vertex 是 3 维的
+    CurveFittingVertex() : Vertex(3) {} // abc: 三个参数， Vertex 是 3 维的，父类类似于一个成员变量
     virtual std::string TypeInfo() const { return "abc"; }
 };
 
@@ -21,20 +21,20 @@ class CurveFittingEdge : public Edge
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // Edge(residual_dimention, num_vertices)
-    // 给边提供两个变量
+    // 给边提供两个变量，这两个量是是观测结果，为已知量
     CurveFittingEdge(double x, double y) : Edge(1, 1, std::vector<std::string>{"abc"})
     {
         x_ = x;
         y_ = y;
     }
-    // 计算曲线模型误差
+    // 计算曲线模型误差， override 表示重写该函数
     virtual void ComputeResidual() override
     {
         Vec3 abc = verticies_[0]->Parameters();                                // 估计的参数
         residual_(0) = std::exp(abc(0) * x_ * x_ + abc(1) * x_ + abc(2)) - y_; // 构建残差
     }
 
-    // 计算残差对变量的雅克比
+    // 计算残差对变量的雅克比，每个边都是一个约束，约束中存在观测量，根据该观测量可求取雅各比。
     virtual void ComputeJacobians() override
     {
         Vec3 abc = verticies_[0]->Parameters();
@@ -55,7 +55,7 @@ int main()
 {
     double a = 1.0, b = 2.0, c = 1.0; // 真实参数值
     int N = 100;                      // 数据点
-    double w_sigma = 1.;              // 噪声Sigma值
+    double w_sigma = 0.2;              // 噪声Sigma值
 
     std::default_random_engine generator;
     std::normal_distribution<double> noise(0., w_sigma);

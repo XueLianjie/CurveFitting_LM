@@ -21,6 +21,7 @@ public:
      * 构造函数
      * @param num_dimension 顶点自身维度
      * @param local_dimension 本地参数化维度，为-1时认为与本身维度一样
+     * explicit 在构造函数声明中修饰构造函数，该构造函数不能发生隐式类型转换，只能通过显式类型转换
      */
     explicit Vertex(int num_dimension, int local_dimension = -1);
 

@@ -140,8 +140,8 @@ private:
     /// PCG 迭代线性求解器
     VecX PCGSolver(const MatXX &A, const VecX &b, int maxIter);
 
-    double currentLambda_;
-    double currentChi_;
+    double currentLambda_;　　//当前迭代lamda选取值
+    double currentChi_;　　　　// 当前方差
     double stopThresholdLM_; // LM 迭代退出阈值条件
     double ni_;              //控制 Lambda 缩放大小
 
