@@ -4,7 +4,7 @@
 
 using namespace myslam::backend;
 using namespace std;
-
+#define USE_STD_EXP
 // 曲线模型的顶点，模板参数：优化变量维度和数据类型
 class CurveFittingVertex : public Vertex
 {
@@ -27,6 +27,7 @@ public:
         x_ = x;
         y_ = y;
     }
+#ifdef USE_STD_EXP
     // 计算曲线模型误差， override 表示重写该函数
     virtual void ComputeResidual() override
     {
@@ -35,6 +36,7 @@ public:
     }
 
     // 计算残差对变量的雅克比，每个边都是一个约束，约束中存在观测量，根据该观测量可求取雅各比。
+    // 对于雅个比中存在的待优化变量取值为动态变化的，跟线性化点位置有关，随着迭代优化进行不断逼近最优值附近
     virtual void ComputeJacobians() override
     {
         Vec3 abc = verticies_[0]->Parameters();
@@ -44,6 +46,23 @@ public:
         jaco_abc << x_ * x_ * exp_y, x_ * exp_y, 1 * exp_y;
         jacobians_[0] = jaco_abc;
     }
+
+#else
+    virtual void ComputeResidual() override
+    {
+        Vec3 abc = verticies_[0]->Parameters();
+        residual_(0) = abc(0) * x_ * x_ + abc(1) * x_ + abc(2) - y_;
+    }
+
+    virtual void ComputeJacobians() override
+    {
+        //double y_2 = abc(0) * x_ * x_ + abc(1) * x_ + abc(2);
+        Eigen::Matrix<double, 1, 3> jaco_abc;
+        jaco_abc << x_ * x_, x_, 1;
+        jacobians_[0] = jaco_abc;
+    }
+#endif
+
     /// 返回边的类型信息
     virtual std::string TypeInfo() const override { return "CurveFittingEdge"; }
 
@@ -55,7 +74,7 @@ int main()
 {
     double a = 1.0, b = 2.0, c = 1.0; // 真实参数值
     int N = 100;                      // 数据点
-    double w_sigma = 0.2;              // 噪声Sigma值
+    double w_sigma = 0.2;             // 噪声Sigma值
 
     std::default_random_engine generator;
     std::normal_distribution<double> noise(0., w_sigma);
@@ -87,10 +106,12 @@ int main()
 
         double x = i / 100.;
         double n = noise(generator);
-        // 观测 y
+// 观测 y
+#ifdef USE_STD_EXP
         double y = std::exp(a * x * x + b * x + c) + n;
-        //        double y = std::exp( a*x*x + b*x + c );
-
+#else
+        double y = a * x * x + b * x + c + n;
+#endif
         // 每个观测对应的残差函数
         shared_ptr<CurveFittingEdge> edge(new CurveFittingEdge(x, y)); // edge 将观测作为参数传入
         std::vector<std::shared_ptr<Vertex>> edge_vertex;              // 每个edge对应的vertex，可能有多个，此处只有一个
